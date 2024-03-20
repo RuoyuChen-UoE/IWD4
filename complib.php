@@ -22,12 +22,14 @@ try {
    $query = "SELECT * FROM Manufacturers";
    $result = $pdo->query($query);
 
-   $mask = 0;
-   $rows = $result->fetchAll(); // Fetch all rows
+   $mask = 0;// Initialize the mask variable to 0. This will be used to build the bitmask.
+   $rows = $result->fetchAll(); // Fetch all rows of 'Manufacturers'
    foreach ($rows as $row) {
+      // In each iteration, multiply the current value of mask by 2 (equivalent to a left bit shift by 1 position), and then add 1.
+      // This operation effectively sets the next lowest bit to 1, gradually building up the bitmask based on the number of rows.
        $mask = (2 * $mask) + 1;
    }
-   $_SESSION['supmask'] = $mask;
+   $_SESSION['supmask'] = $mask;// store the final bitmask value under the key 'supmask'
 
 } catch (PDOException $e) {
    die("Failed to execute query: " . $e->getMessage());
@@ -62,7 +64,6 @@ _HEAD1;
 //        $mask = (2 * $mask) + 1;
 //      }
 // $_SESSION['supmask'] = $mask;
-
 
 
 echo <<<_EOP
