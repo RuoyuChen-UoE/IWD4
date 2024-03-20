@@ -1,10 +1,7 @@
 <?php
 session_start();
 require_once 'login.php';
-echo<<<_HEAD1
-<html>
-<body>
-_HEAD1;
+
 
 // THE CONNECTION AND QUERY SECTIONS NEED TO BE MADE TO WORK FOR PHP 8 USING PDO... //
 // Connect to the database using PDO
@@ -20,35 +17,55 @@ try {
    die("Failed to connect to database: " . $e->getMessage());
 }
 
+// Execute a query using PDO
+try {
+   $query = "SELECT * FROM Manufacturers";
+   $result = $pdo->query($query);
 
-
-
-
-
-
-
-
-
-
-//finished
-$db_server = mysql_connect($db_hostname,$db_username,$db_password);
-if(!$db_server) die("Unable to connect to database: " . mysql_error());
-mysql_select_db($db_database,$db_server) or die ("Unable to select database: " . mysql_error());     
-
-$query = "select * from Manufacturers";
-     $result = mysql_query($query);
-     if(!$result) die("unable to process query: " . mysql_error());
-
-
-     $rows = mysql_num_rows($result);
-     $mask = 0;
-     mysql_close($db_server);
-     for($j = 0 ; $j < $rows ; ++$j)
-     {
+   $mask = 0;
+   $rows = $result->fetchAll(); // Fetch all rows
+   foreach ($rows as $row) {
        $mask = (2 * $mask) + 1;
-     }
-$_SESSION['supmask'] = $mask;
-   echo <<<_EOP
+   }
+   $_SESSION['supmask'] = $mask;
+
+} catch (PDOException $e) {
+   die("Failed to execute query: " . $e->getMessage());
+}
+
+echo<<<_HEAD1
+<html>
+<body>
+_HEAD1;
+
+
+
+
+
+// //finished
+// $db_server = mysql_connect($db_hostname,$db_username,$db_password);
+// if(!$db_server) die("Unable to connect to database: " . mysql_error());
+// mysql_select_db($db_database,$db_server) or die ("Unable to select database: " . mysql_error());     
+// // 
+
+
+// $query = "select * from Manufacturers";
+//      $result = mysql_query($query);
+//      if(!$result) die("unable to process query: " . mysql_error());
+
+
+//      $rows = mysql_num_rows($result);
+//      $mask = 0;
+//      mysql_close($db_server);
+//      for($j = 0 ; $j < $rows ; ++$j)
+//      {
+//        $mask = (2 * $mask) + 1;
+//      }
+// $_SESSION['supmask'] = $mask;
+
+
+
+echo <<<_EOP
 <script>
    function validate(form) {
    fail = ""
