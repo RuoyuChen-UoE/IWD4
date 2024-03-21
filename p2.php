@@ -1,44 +1,86 @@
 <?php
 session_start();
 require_once 'login.php';
+require_once 'dbconnect.php';// Contains the database connection
+
 include 'redir.php';
+include 'menuf.php';
+
 echo<<<_HEAD1
 <html>
 <body>
 _HEAD1;
-include 'menuf.php';
+
 // THE CONNECTION AND QUERY SECTIONS NEED TO BE MADE TO WORK FOR PHP 8 USING PDO... //
-$db_server = mysql_connect($db_hostname,$db_username,$db_password);
-if(!$db_server) die("Unable to connect to database: " . mysql_error());
-mysql_select_db($db_database,$db_server) or die ("Unable to select database: " . mysql_error());     
-$query = "select * from Manufacturers";
-$result = mysql_query($query);
-if(!$result) die("unable to process query: " . mysql_error());
-$rows = mysql_num_rows($result);
-$smask = $_SESSION['supmask'];
-$firstmn = False;
-$mansel = "(";
-for($j = 0 ; $j < $rows ; ++$j)
-  {
-    $row = mysql_fetch_row($result);
-    $sid[$j] = $row[0];
-    $snm[$j] = $row[1];
-    $sact[$j] = 0;
-    $tvl = 1 << ($sid[$j] - 1);
-    if($tvl == ($tvl & $smask)) {
-	$sact[$j] = 1;
-	if($firstmn) $mansel = $mansel." or ";
-	$firstmn = True;
-	$mansel = $mansel." (ManuID = ".$sid[$j].")";
-      }
+// $db_server = mysql_connect($db_hostname,$db_username,$db_password);
+// if(!$db_server) die("Unable to connect to database: " . mysql_error());
+// mysql_select_db($db_database,$db_server) or die ("Unable to select database: " . mysql_error());     
+// $query = "select * from Manufacturers";
+// $result = mysql_query($query);
+// if(!$result) die("unable to process query: " . mysql_error());
+// $rows = mysql_num_rows($result);
+// $smask = $_SESSION['supmask'];
+
+// $firstmn = False;
+// $mansel = "(";
+// for($j = 0 ; $j < $rows ; ++$j)
+//   {
+//     $row = mysql_fetch_row($result);
+//     $sid[$j] = $row[0];
+//     $snm[$j] = $row[1];
+//     $sact[$j] = 0;
+//     $tvl = 1 << ($sid[$j] - 1);
+//     if($tvl == ($tvl & $smask)) {
+// 	$sact[$j] = 1;
+	// if($firstmn) $mansel = $mansel." or ";
+	// $firstmn = True;
+	// $mansel = $mansel." (ManuID = ".$sid[$j].")";
+  //     }
+  // }
+// $mansel = $mansel.")";
+// $setpar = isset($_POST['natmax']); 
+
+// Query Manufacturer information
+try {
+  $query = 'SELECT * FROM Manufacturers';
+  $result = $pdo->query($query);//Execute queries using PDO objects
+
+  $rows = $result->fetchAll(PDO::FETCH_ASSOC);//Gets all rows as an associative array
+  $smask = $_SESSION['supmask'];
+
+  $firstmn = False;
+  $mansel = "(";
+  
+  foreach ($result->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $sid[] = $row['id']; 
+    $snm[] = $row['name'];
+    $sact[] = 0;
+    $tvl = 1 << ($row['id'] - 1); // Calculate the bit value for this supplier
+   
+    if ($tvl == ($tvl & $smask)) { // Check if this supplier is selected
+        //$sact[count($sact) - 1] = 1; // Update the activation status
+        if ($firstmn) {
+          $mansel .= " OR ";
+        } else {
+          $firstmn = True;
+        }
+        $mansel .= " (ManuID = $sid)";
+    }
+    $mansel = $mansel.")";
+
+    $setpar = isset($_POST['natmax']); //Check if specific POST parameters are set
   }
-$mansel = $mansel.")";
-$setpar = isset($_POST['natmax']); 
+} catch (PDOException $e) {
+  die("Failed to execute query: " . $e->getMessage());
+}
+  
+
 echo <<<_MAIN1
     <pre>
 This is the catalogue retrieval Page  
     </pre>
 _MAIN1;
+
 if($setpar) {
   $firstsl = False;
   $compsel = "select catn from Compounds where (";
