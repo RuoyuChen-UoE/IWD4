@@ -1,72 +1,76 @@
 <?php
 session_start();
-require_once 'login.php';
-include 'redir.php';
+require_once 'login.php'; // Include database login credentials
+require_once 'dbconnect.php';// Contains the database connection
+
+include 'redir.php';// Include redirection logic to ensure required session variables are set
+include 'menuf.php';// Contains menu and user interface elements
+
+
+try {
+  $query = 'SELECT * FROM Manufacturers';
+  $result = $pdo->query($query);//Execute queries using PDO objects
+
+  $rows = $result->fetchAll(PDO::FETCH_ASSOC);//Gets all rows as an associative array
+  $smask = isset($_SESSION['supmask']) ? $_SESSION['supmask'] : 0; // Retrieve or initialize the supplier mask
+
+  $sid = [];
+  $snm = [];
+  $sact = [];
+  foreach ($rows as $row) {
+    $sid[] = $row['id']; // 'id' is the column name for supplier ID
+    $snm[] = $row['name']; // 'name' is the column name for supplier name
+    $sact[] = 0; // Initialize activation status as 0
+    
+    $tvl = 1 << ($row['id'] - 1); // Calculate the bit value for this supplier
+    if ($tvl == ($tvl & $smask)) { // Check if this supplier is selected
+        $sact[count($sact) - 1] = 1; // Update the activation status
+    }
+  }
+} catch (PDOException $e) {
+  die("Failed to execute query: " . $e->getMessage());
+}
+
+
+// Handling form submission to update selected suppliers
+if(isset($_POST['supplier'])){
+  $supplier = $_POST['supplier'];
+  $nele = count($supplier);
+  foreach ($rows as $k => $row){
+    $sact[$k] = in_array($row['name'], $supplier) ? 1 : 0; // Update activation status based on form submission
+  }
+  // Recalculate the supplier mask based on the selected suppliers
+  $smask = 0;
+  foreach ($sid as $id){
+      if (in_array($id, $supplier)) {
+        $smask |= (1 << ($id - 1));
+      } 
+  }
+
+  $_SESSION['supmask'] = $smask;// Update the supplier mask in the session
+}
+
 echo<<<_HEAD1
 <html>
 <body>
-_HEAD1;
-include 'menuf.php';
-// THE CONNECTION AND QUERY SECTIONS NEED TO BE MADE TO WORK FOR PHP 8 USING PDO... //
-$db_server = mysql_connect($db_hostname,$db_username,$db_password);
-if(!$db_server) die("Unable to connect to database: " . mysql_error());
-mysql_select_db($db_database,$db_server) or die ("Unable to select database: " . mysql_error());     
-$query = "select * from Manufacturers";
-$result = mysql_query($query);
-if(!$result) die("unable to process query: " . mysql_error());
-$rows = mysql_num_rows($result);
+_HEAD1;   
 
-$smask = $_SESSION['supmask'];
-for($j = 0 ; $j < $rows ; ++$j)
-  {
-    $row = mysql_fetch_row($result);
-    $sid[$j] = $row[0];
-    $snm[$j] = $row[1];
-    $sact[$j] = 0;
-    $tvl = 1 << ($sid[$j] - 1);
-    if($tvl == ($tvl & $smask)) {
-	$sact[$j] = 1;
-      }
-  }
-if(isset($_POST['supplier'])) 
-   {
-     $supplier = $_POST['supplier'];
-     $nele = sizeof($supplier);
-      for($k = 0; $k <$rows; ++$k) {
-       $sact[$k] = 0;
-       for($j = 0 ; $j < $nele ; ++$j) {
-	 if(strcmp($supplier[$j],$snm[$k]) == 0) $sact[$k] = 1;
-       }
-     }
-     $smask = 0;
-     for($j = 0 ; $j < $rows ; ++$j)
-       {
-	 if($sact[$j] == 1) {
-	   $smask = $smask + (1 << ($sid[$j] - 1));
-	 }
-       }
-     $_SESSION['supmask'] = $smask;
-   }
-   echo 'Currently selected Suppliers: ';
-   for($j = 0 ; $j < $rows ; ++$j)
-      {
-    	if($sact[$j] == 1) {
-	  echo $snm[$j] ;
-	  echo " ";
-	}
-      }
-    echo  '<br><pre> <form action="p1.php" method="post">';
-    for($j = 0 ; $j < $rows ; ++$j)
-      {
-    	echo $snm[$j];
-	echo' <input type="checkbox" name="supplier[]" value="';
-	echo $snm[$j];
-        echo'"/>';
-	echo"\n";
-      }
+# output the currently selected suppliers
+echo 'Currently selected Suppliers: ';
+foreach ($snm as $j => $name) {
+    if ($sact[$j] == 1) {
+        echo $name . " ";
+    }
+}
+
+// Display the form with checkboxes for each supplier
+echo '<br><pre><form action="p1.php" method="post">';
+foreach ($snm as $j => $name) {
+    echo $name . '<input type="checkbox" name="supplier[]" value="' . $sid[$j] . '"' . ($sact[$j] ? ' checked' : '') . '/><br>';
+}
+echo '<input type="submit" value="OK" /></form></pre>';
+
 echo <<<_TAIL1
- <input type="submit" value="OK" />
-</pre></form>
 </body>
 </html>
 _TAIL1;
