@@ -67,8 +67,6 @@ try {
         $mansel .= " (ManuID = $sid)";
     }
     $mansel = $mansel.")";
-
-    $setpar = isset($_POST['natmax']); //Check if specific POST parameters are set
   }
 } catch (PDOException $e) {
   die("Failed to execute query: " . $e->getMessage());
@@ -81,6 +79,7 @@ This is the catalogue retrieval Page
     </pre>
 _MAIN1;
 
+$setpar = isset($_POST['natmax']); //Check if specific POST parameters are set
 if($setpar) {
   $firstsl = False;
   $compsel = "select catn from Compounds where (";
