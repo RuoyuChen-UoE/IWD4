@@ -16,75 +16,95 @@ try {
   $stmt = $pdo->prepare($query_manu);
   // call the stored procedure
   $stmt->execute();
-  $stmt->debugDumpParams();//debug
+  // $stmt->debugDumpParams();//debug
     // Fetch all results into an array
-  $result = $stmt->fetchAll();
+  $results = $stmt->fetchAll();
+  $rows = count($results);
   // Close the cursor, allowing the statement to be executed again
   $stmt->closeCursor();
   //close the query
   $pdo = null;
 
-  $smask = $_SESSION['supmask'];
+// echo '<pre>';
+// var_dump($results);
+// echo '</pre>';
 
-  $sid = [];
-  $snm = [];
-  $sact = [];
-  foreach ($result as $row) {
-    $sid[] = $row['id']; // 'id' is the column name for supplier ID
-    $snm[] = $row['name']; // 'name' is the column name for supplier name
-    $sact[] = 0; // Initialize activation status as 0--(inactivated)
-    
-    $tvl = 1 << ($row['id'] - 1); // Calculate the bit value for this supplier
-    if ($tvl == ($tvl & $smask)) { // Check if this supplier is selected
-        $sact[count($sact) - 1] = 1; // Update the activation status
-    }
-  }
 } catch (PDOException $e) {
   die("Failed to execute query: " . $e->getMessage());
 }
 
 
-// Handling form submission to update selected suppliers
-if(isset($_POST['supplier'])){
-  $supplier = $_POST['supplier'];
-  
-  // debug
-  echo "<pre>";
-  var_dump($supplier);
-  echo "</pre>";
 
-  $nele = count($supplier);//nele--number of emelents selected
-  foreach ($result as $k => $row){
-    //using 'in_array' to check if  the current suppliers' name is in the arry of suppliers selected by the user
-    $sact[$k] = in_array($row['name'], $supplier) ? 1 : 0; // Update activation status based on form submission
-  } // true--'1' represents selected;
-  // Recalculate the supplier mask based on the selected suppliers
-  $smask = 0;
-  foreach ($sid as $id){
-      if (in_array($id, $supplier)) {
-        $smask |= (1 << ($id - 1));
-      } 
+$_SESSION['supmask'] = 0;
+$smask = $_SESSION['supmask'];
+// echo "<p>Current supplier mask: " . $_SESSION['supmask'] . "</p>";//debug
+
+$sact = array();
+for($j = 0 ; $j < $rows ; ++$j) {  // Get the results line by line
+  $row = $results[$j];  // Gets the contents of the current row from the $results array
+  $sid[$j] = $row['id'];  // The first column is the supplier ID 
+  $snm[$j] = $row['name'];  // second colom is supplier name
+  
+  
+  $sact[$j] = 0;  // Initialize the selected status to unselected--selected action
+  $tvl = 1 << ($sid[$j] - 1);  // Calculate the bit mask
+  //Determine whether the supplier is selected
+  if($tvl == ($tvl & $smask)) {
+    $sact[$j] = 1;//If yes, set it to selected
   }
-  $_SESSION['supmask'] = $smask;// Update the supplier mask in the session
 }
 
+// echo '<pre>';
+// var_dump($sact);
+// echo '</pre>';
 
-# output the currently selected suppliers
-  echo 'Currently selected Suppliers: ';
-  foreach ($snm as $j => $name) {//foreach ($array as $key => $value)
-      if ($sact[$j]) {
-          echo $name . " ";
+if(isset($_POST['supplier'])) //Check that the supplier form is set
+   {
+     //Get submitted supplier data
+     $supplier = $_POST['supplier'];//Assign the 'supplier' array of the form submission to the variable
+     $nele = sizeof($supplier);//calculate the size of the '$supplier' array and store in '$nele'
+      //reset the status of supplier selection 
+      for($k = 0; $k <$rows; ++$k) {//Iterate over all suppliers previously retrieved from the database
+       $sact[$k] = 0;
+       //renew the status of supplier selection
+       for($j = 0 ; $j < $nele ; ++$j) {//Iterate over the supplier names submitted by the user from the form (the $supplier array).
+	 if(strcmp($supplier[$j],$snm[$k]) == 0) $sact[$k] = 1;
+       }//if strcmp(...)is ture, then execute $sact[$k]=1,means selected
+     }
+     //calculate new bit mask
+     $smask = 0;//initialise
+     for($j = 0 ; $j < $rows ; ++$j)
+       {
+	 if($sact[$j] == 1) {
+	   $smask = $smask + (1 << ($sid[$j] - 1));
+	 }
+       }
+     $_SESSION['supmask'] = $smask;//save into session for later use or use in other pages
+   }
+   echo 'Currently selected Suppliers: ';
+   // show selected suppliers
+   for($j = 0 ; $j < $rows ; ++$j)
+      {
+    	if($sact[$j] == 1) {
+	  echo $snm[$j] ;
+	  echo " ";
+	}
       }
-  }
 
-  // Display the form with checkboxes for each supplier
-  echo '<br><pre><form action="p1.php" method="post">';
-  foreach ($snm as $j => $name) {
-      echo $name . '<input type="checkbox" name="supplier[]" value="' . $sid[$j] . '"' . ($sact[$j] ? ' checked' : '') . '/><br>';
-  }
-  echo '<input type="submit" value="OK" /></form></pre>';
+    //Build a supplier selection form:
+    echo  '<br><pre> <form action="p1.php" method="post">';
+    for($j = 0 ; $j < $rows ; ++$j)
+      {
+      //// Check whether it is selected, and if so, add the "checked" attribute to the checkbox
+      $checked = $sact[$j] ? "checked" : "";
+      echo "<label>{$snm[$j]} <input type='checkbox' name='supplier[]' value='{$snm[$j]}' $checked/></label><br>";
+      }
+
+
 
 echo <<<_TAIL1
+ <input type="submit" value="OK" />
+</pre></form>
 </body>
 </html>
 _TAIL1;
