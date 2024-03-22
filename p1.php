@@ -39,7 +39,7 @@ $_SESSION['supmask'] = 0;
 $smask = $_SESSION['supmask'];
 // echo "<p>Current supplier mask: " . $_SESSION['supmask'] . "</p>";//debug
 
-$sact = array();
+// $sact = array();
 for($j = 0 ; $j < $rows ; ++$j) {  // Get the results line by line
   $row = $results[$j];  // Gets the contents of the current row from the $results array
   $sid[$j] = $row['id'];  // The first column is the supplier ID 
