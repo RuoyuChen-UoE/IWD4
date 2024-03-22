@@ -53,7 +53,7 @@ if(isset($_POST['supplier'])){
   var_dump($supplier);
   echo "</pre>";
 
-  $nele = count($supplier);//nele--number of emelents
+  $nele = count($supplier);//nele--number of emelents selected
   foreach ($result as $k => $row){
     //using 'in_array' to check if  the current suppliers' name is in the arry of suppliers selected by the user
     $sact[$k] = in_array($row['name'], $supplier) ? 1 : 0; // Update activation status based on form submission
