@@ -4,7 +4,6 @@ require_once 'login.php';
 require_once 'dbconnect.php';// Contains the database connection
 include 'redir.php';
 include 'menuf.php';
-
 echo<<<_HEAD1
 <html>
 <body>
@@ -16,22 +15,23 @@ try {
   $stmt = $pdo->prepare($query_manu);
   // call the stored procedure
   $stmt->execute();
-  // $stmt->debugDumpParams();//debug
+  $stmt->debugDumpParams();//debug
     // Fetch all results into an array
   $results = $stmt->fetchAll();
   $rows = count($results);
   // Close the cursor, allowing the statement to be executed again
   $stmt->closeCursor();
   //close the query
-  // $pdo = null;
 
-echo '<pre>'."results";
-var_dump($results);
-echo '</pre>';
 
+  echo '<pre>'."result";
+  var_dump($results);
+  echo '</pre>';
+  
 } catch (PDOException $e) {
   die("Failed to execute query: " . $e->getMessage());
 }
+
 //看看等会要不要加 $_SESSION['supmask'] = 0;
 $smask = $_SESSION['supmask'];
 echo "<p>Current supplier mask: " . $_SESSION['supmask'] . "</p>";//debug
@@ -68,56 +68,40 @@ _MAIN1;
 
 $setpar = isset($_POST['natmax']); 
 if($setpar) {
-  $conditions = [];//Stores all query conditions
-  $params = []; // Stores all parameter values to be bound to the query condition
-  
-  // Check that 'natmax' and 'natmin' are present in the POST request and that they are not empty
-  //number of atoms--natm
-  if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
-    $conditions[] = "(natm > :natmin AND natm < :natmax)";//Add query criteria
-    $params[':natmin'] = $_POST['natmin'];//Assign the 'natmin' value in the POST request
-    $params[':natmax'] = $_POST['natmax'];
+  $firstsl = False;
+  $compsel = "select catn from Compounds where (";
+  if (($_POST['natmax'] != "") && ($_POST['natmin']!="")) {
+    $compsel = $compsel."(natm > ".get_post('natmin')." and  natm < ".get_post('natmax').")";
+    $firstsl = True;
   }
 
-  //number of carbons--ncar
-  if (!empty($_POST['ncrmax']) && !empty($_POST['ncrmin'])) {
-    $conditions[] = "(ncar > :ncrmin AND ncar < :ncrmax)"; 
-    $params[':ncrmin'] = $_POST['ncrmin']; 
-    $params[':ncrmax'] = $_POST['ncrmax'];
+  if (($_POST['ncrmax']!="") && ($_POST['ncrmin']!="")) {
+    if($firstsl) $compsel = $compsel." and ";
+    $compsel = $compsel."(ncar > ".get_post('ncrmin')." and  ncar < ".get_post('ncrmax').")";
+    $firstsl = True;
   }
 
-  //number of nitrogen--nnit
-  if (!empty($_POST['nntmax']) && !empty($_POST['nntmin'])) {
-    $conditions[] = "(nnit > :nntmin AND nnit < :nntmax)";
-    $params[':nntmin'] = $_POST['nntmin']; 
-    $params[':nntmax'] = $_POST['nntmax'];
+  if (($_POST['nntmax']!="") && ($_POST['nntmin']!="")) {
+    if($firstsl) $compsel = $compsel." and ";
+    $compsel = $compsel."(nnit > ".get_post('nntmin')." and  nnit < ".get_post('nntmax').")";
+    $firstsl = True;
   }
 
-  //number of oxygen--noxy
-  if (!empty($_POST['noxmax']) && !empty($_POST['noxmin'])) {
-    $conditions[] = "(noxy > :noxmin AND noxy < :noxmax)"; 
-    $params[':noxmax'] = $_POST['noxmax'];
+  if (($_POST['noxmax']!="") && ($_POST['noxmin']!="")) {
+    if($firstsl) $compsel = $compsel." and ";
+    $compsel = $compsel."(noxy > ".get_post('noxmin')." and  noxy < ".get_post('noxmax').")";
+    $firstsl = True;
   }
-  //adding more!--nsul/ncycl/nhdon/nhacc/nrotb
 
   echo "<pre>";
-  // Check if any conditions are added to the condition array
-  if (!empty($conditions)) {
-    // If available, build a complete SQL query
-    // Use the implode() function to concatenate all conditions with 'AND', forming part of the WHERE clause
-    $query = "SELECT catn FROM Compounds WHERE " . implode(' AND ', $conditions);
-
+  if($firstsl) {
+    $compsel = $compsel.") and ".$mansel;//End the condition statement and add the manufacturer condition
+    echo $compsel . "\n";
     try {
     // Execute queries using PDO
-      $stmt =$pdo-> prepare($query);
-      // Bind the PHP variable to the corresponding parameter of the SQL query using the bindParam() method
-      //The binding is done only if 'natmax' and 'natmin' are actually present in the POST request
-      foreach ($params as $param => $value) { // 遍历所有的参数并绑定它们到 SQL 语句
-        $stmt->bindParam($param, $value);
-    }
-      //execute query
+    $stmt =$pdo->prepare($compsel);
       $stmt->execute();
-      $results = $stmt->fetchAll();// Get the query result and return all the result rows as an associative array
+      $results = $stmt->fetchAll();
 
       $rows = count($results);//count the lines of the rows
       $stmt->closeCursor();
@@ -128,32 +112,17 @@ if($setpar) {
         {
       $row = $results[$j];
       echo $row[0],"\n";
-
+      $pdo = null;
       }
-     }
-    } catch (PDOException $e) {
-      die("Failed to execute query: " . $e->getMessage());
-  }  
-    } else {
-      echo "No Query Given\n";
     }
-    echo "</pre>";
+  } catch (PDOException $e) {
+    die("Failed to execute query: " . $e->getMessage());
+}  
+  } else {
+    echo "No Query Given\n";
   }
-
-         
-
-// echo '<pre>';
-// var_dump($_POST);
-// echo '</pre>';
-
-// echo '<pre>';
-// var_dump($params);
-// echo '</pre>';
-
-
-
-
-
+  echo "</pre>";
+}  
 echo <<<_TAIL1
    <form action="p2.php" method="post"><pre>
        Max Atoms      <input type="text" name="natmax"/>    Min Atoms    <input type="text" name="natmin"/>
@@ -162,12 +131,11 @@ echo <<<_TAIL1
        Max Oxygens    <input type="text" name="noxmax"/>    Min Oxygens  <input type="text" name="noxmin"/>
                    <input type="submit" value="list" />
 </pre></form>
-
 </body>
 </html>
 _TAIL1;
-// function get_post( $var)
-// {
-//     return $_POST[$var];
-// }
+function get_post( $var)
+{
+    return $_POST[$var];
+}
 ?>
