@@ -12,37 +12,53 @@ _HEAD1;
 
 // Query Manufacturer information
 try {
-  $query = 'SELECT * FROM Manufacturers';
-  $result = $pdo->query($query);//Execute queries using PDO objects
+  $query_manu = "SELECT * FROM Manufacturers";
+  $stmt = $pdo->prepare($query_manu);
+  // call the stored procedure
+  $stmt->execute();
+  // $stmt->debugDumpParams();//debug
+    // Fetch all results into an array
+  $results = $stmt->fetchAll();
+  $rows = count($results);
+  // Close the cursor, allowing the statement to be executed again
+  $stmt->closeCursor();
+  //close the query
+  $pdo = null;
 
-  $rows = $result->fetchAll(PDO::FETCH_ASSOC);//Gets all rows as an associative array
-  $smask = $_SESSION['supmask'];
+echo '<pre>';
+var_dump($results);
+echo '</pre>';
 
-
-  $mansel = "(";//Limit query results to contain only compounds from a specific manufacturer
-  $firstmn = False;
-  foreach ($rows as $row) {
-    $sid[] = $row['id']; 
-    $snm[] = $row['name'];
-    $sact[] = 0;
-    $tvl = 1 << ($row['id'] - 1); // Calculate the bit value for this supplier
-    if ($tvl == ($tvl & $smask)) { // Check if this supplier is selected
-        //$sact[count($sact) - 1] = 1; // Update the activation status
-        if ($firstmn) {
-          $mansel .= " OR ";
-        } else {
-          $firstmn = True;
-        }
-        $mansel .= " (ManuID = " . $row['id'] . ")";
-    }
-  }
-  if ($firstmn) {
-    $mansel .= ")"; // Add closing parentheses only at the end
-  }
 } catch (PDOException $e) {
   die("Failed to execute query: " . $e->getMessage());
 }
-  
+//看看等会要不要加 $_SESSION['supmask'] = 0;
+  $smask = $_SESSION['supmask'];
+echo "<p>Current supplier mask: " . $_SESSION['supmask'] . "</p>";//debug
+
+$firstmn = False;
+//等下看看要不要加这一句--$sact = array();
+$mansel = "(";// If the manufacturer is selected, its ID is added to the $mansel string to build part of the subsequent query.
+for($j = 0 ; $j < $rows ; ++$j) {  // Get the results line by line
+  $row = $results[$j];  // Gets the contents of the current row from the $results array
+  $sid[$j] = $row['id'];  // The first column is the supplier ID 
+  $snm[$j] = $row['name'];  // second colom is supplier name  
+  $sact[$j] = 0;  // Initialize the selected status to unselected--selected action
+  $tvl = 1 << ($sid[$j] - 1);  // Calculate the bit mask
+  //Determine whether the supplier is selected
+  if($tvl == ($tvl & $smask)) {
+    $sact[$j] = 1;//If yes, set it to selected
+    if($firstmn) $mansel = $mansel." or ";
+	    $firstmn = True;
+	    $mansel = $mansel." (ManuID = ".$sid[$j].")";
+  }
+}
+$mansel = $mansel.")";
+echo "<p>mansel: " . $mansel . "</p>";//debug
+
+echo '<pre>'. "sact";
+var_dump($sact);
+echo '</pre>';
 
 echo <<<_MAIN1
     <pre>
@@ -50,81 +66,117 @@ This is the catalogue retrieval Page
     </pre>
 _MAIN1;
 
-$setpar = isset($_POST['natmax']); //Check if specific POST parameters are set
-$firstsl = False;//Initializes $firstsl outside of a conditional statement
-
-//Check if a condition is added and build $compsel
+$setpar = isset($_POST['natmax']); 
 if($setpar) {
-  //Initializes the query criteria and parameter array
-  $conditions = [];
-  $params = [];  
-  //Build query conditions and parameters based on user input
-  if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
-    $conditions[] = "(natm > :natmin AND natm < :natmax)";
-    $params[':natmin'] = $_POST['natmin'];
-    $params[':natmax'] = $_POST['natmax'];  
-  }
-
-  if (!empty($_POST['ncrmax']) && !empty($_POST['ncrmin'])) {
-    $conditions[] = "(ncar > :ncrmin AND ncar < :ncrmax)";
-    $params[':ncrmin'] = $_POST['ncrmin'];
-    $params[':ncrmax'] = $_POST['ncrmax'];
-  }
-
-  if (!empty($_POST['nntmax']) && !empty($_POST['nntmin'])) {
-      $conditions[] = "(nnit > :nntmin AND nnit < :nntmax)";
-      $params[':nntmin'] = $_POST['nntmin'];
-      $params[':nntmax'] = $_POST['nntmax'];
-  }
-
-  if (!empty($_POST['noxmax']) && !empty($_POST['noxmin'])) {
-      $conditions[] = "(noxy > :noxmin AND noxy < :noxmax)";
-      $params[':noxmin'] = $_POST['noxmin'];
-      $params[':noxmax'] = $_POST['noxmax'];
-  }
-  // $firstsl should be set to True only if there is a condition
-  if (count($conditions) > 0) {
+  $firstsl = False;
+  $compsel = "select catn from Compounds where (";
+  if (($_POST['natmax'] != "") && ($_POST['natmin']!="")) {
+    $compsel = $compsel."(natm > ".get_post('natmin')." and  natm < ".get_post('natmax').")";
     $firstsl = True;
-    $compsel = "SELECT * FROM Compounds WHERE " . implode(" AND ", $conditions);
-    if ($firstmn) { // If there is a selected manufacturer, it is added to the query
-      $compsel .= " AND " . $mansel;
-    }
   }
-}
+  if (($_POST['ncrmax']!="") && ($_POST['ncrmin']!="")) {
+    if($firstsl) $compsel = $compsel." and ";
+    $compsel = $compsel."(ncar > ".get_post('ncrmin')." and  ncar < ".get_post('ncrmax').")";
+    $firstsl = True;
+  }
+  if (($_POST['nntmax']!="") && ($_POST['nntmin']!="")) {
+    if($firstsl) $compsel = $compsel." and ";
+    $compsel = $compsel."(nnit > ".get_post('nntmin')." and  nnit < ".get_post('nntmax').")";
+    $firstsl = True;
+  }
+  if (($_POST['noxmax']!="") && ($_POST['noxmin']!="")) {
+    if($firstsl) $compsel = $compsel." and ";
+    $compsel = $compsel."(noxy > ".get_post('noxmin')." and  noxy < ".get_post('noxmax').")";
+    $firstsl = True;
+  }
 
-
-echo '<pre>';
-var_dump($_POST);
-echo '</pre>';
-
-echo '<pre>';
-var_dump($params);
-echo '</pre>';
 
   echo "<pre>";
   if($firstsl) {
-    // $compsel = $compsel.") and ".$mansel;//End the condition statement and add the manufacturer condition
-    // echo $compsel . "\n";
+    $compsel = $compsel.") and ".$mansel;//End the condition statement and add the manufacturer condition
+    echo $compsel . "\n";
     try {
     // Execute queries using PDO
-        $result =$pdo->query($compsel);
-        $rows = $result->fetchAll(PDO::FETCH_ASSOC);
+      $stmt =$pdo->prepare($compsel);
+      $stmt->execute();
+      $results = $stmt->fetch();
 
-        $rowCount = count($rows);//count the lines of the rows
-        if($rows > 100) {
-          echo "Too many results ",$rows," Max is 100\n";
-        } else  {
-          foreach ($rows as $row) {
-            echo $row['catn'] . "\n";
-          }
-        }
-      } catch (PDOException $e) {
-        die("Unable to process query: " . $e->getMessage());
+      $rows = count($results);//count the lines of the rows
+      $stmt->closeCursor();
+      if($rows > 100) {
+        echo "Too many results ",$rows," Max is 100\n";
+      } else  {
+      for($j = 0 ; $j < $rows ; ++$j)
+        {
+      $row = $results[$j];
+      echo $row[0],"\n";
+      $pdo = null;
       }
-  } else {
-    echo "No Query Given\n";
-  }        
-  echo "</pre>";
+     }
+    } catch (PDOException $e) {
+      die("Failed to execute query: " . $e->getMessage());
+  }  
+    } else {
+      echo "No Query Given\n";
+    }
+    echo "</pre>";
+  }  
+
+         
+          
+          
+
+// $setpar = isset($_POST['natmax']); //Check if specific POST parameters are set
+// $firstsl = False;//Initializes $firstsl outside of a conditional statement
+
+// //Check if a condition is added and build $compsel
+// if($setpar) {
+//   //Initializes the query criteria and parameter array
+//   $conditions = [];
+//   $params = [];  
+//   //Build query conditions and parameters based on user input
+//   if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
+//     $conditions[] = "(natm > :natmin AND natm < :natmax)";
+//     $params[':natmin'] = $_POST['natmin'];
+//     $params[':natmax'] = $_POST['natmax'];  
+//   }
+
+//   if (!empty($_POST['ncrmax']) && !empty($_POST['ncrmin'])) {
+//     $conditions[] = "(ncar > :ncrmin AND ncar < :ncrmax)";
+//     $params[':ncrmin'] = $_POST['ncrmin'];
+//     $params[':ncrmax'] = $_POST['ncrmax'];
+//   }
+
+//   if (!empty($_POST['nntmax']) && !empty($_POST['nntmin'])) {
+//       $conditions[] = "(nnit > :nntmin AND nnit < :nntmax)";
+//       $params[':nntmin'] = $_POST['nntmin'];
+//       $params[':nntmax'] = $_POST['nntmax'];
+//   }
+
+//   if (!empty($_POST['noxmax']) && !empty($_POST['noxmin'])) {
+//       $conditions[] = "(noxy > :noxmin AND noxy < :noxmax)";
+//       $params[':noxmin'] = $_POST['noxmin'];
+//       $params[':noxmax'] = $_POST['noxmax'];
+//   }
+//   // $firstsl should be set to True only if there is a condition
+//   if (count($conditions) > 0) {
+//     $firstsl = True;
+//     $compsel = "SELECT * FROM Compounds WHERE " . implode(" AND ", $conditions);
+//     if ($firstmn) { // If there is a selected manufacturer, it is added to the query
+//       $compsel .= " AND " . $mansel;
+//     }
+//   }
+// }
+
+
+// echo '<pre>';
+// var_dump($_POST);
+// echo '</pre>';
+
+// echo '<pre>';
+// var_dump($params);
+// echo '</pre>';
+
 
 
 
