@@ -23,9 +23,9 @@ try {
   // Close the cursor, allowing the statement to be executed again
   $stmt->closeCursor();
   //close the query
-  $pdo = null;
+  // $pdo = null;
 
-echo '<pre>';
+echo '<pre>'."results";
 var_dump($results);
 echo '</pre>';
 
@@ -33,7 +33,7 @@ echo '</pre>';
   die("Failed to execute query: " . $e->getMessage());
 }
 //看看等会要不要加 $_SESSION['supmask'] = 0;
-  $smask = $_SESSION['supmask'];
+$smask = $_SESSION['supmask'];
 echo "<p>Current supplier mask: " . $_SESSION['supmask'] . "</p>";//debug
 
 $firstmn = False;
@@ -68,38 +68,57 @@ _MAIN1;
 
 $setpar = isset($_POST['natmax']); 
 if($setpar) {
-  $firstsl = False;
-  $compsel = "select catn from Compounds where (";
-  if (($_POST['natmax'] != "") && ($_POST['natmin']!="")) {
-    $compsel = $compsel."(natm > ".get_post('natmin')." and  natm < ".get_post('natmax').")";
-    $firstsl = True;
-  }
-  if (($_POST['ncrmax']!="") && ($_POST['ncrmin']!="")) {
-    if($firstsl) $compsel = $compsel." and ";
-    $compsel = $compsel."(ncar > ".get_post('ncrmin')." and  ncar < ".get_post('ncrmax').")";
-    $firstsl = True;
-  }
-  if (($_POST['nntmax']!="") && ($_POST['nntmin']!="")) {
-    if($firstsl) $compsel = $compsel." and ";
-    $compsel = $compsel."(nnit > ".get_post('nntmin')." and  nnit < ".get_post('nntmax').")";
-    $firstsl = True;
-  }
-  if (($_POST['noxmax']!="") && ($_POST['noxmin']!="")) {
-    if($firstsl) $compsel = $compsel." and ";
-    $compsel = $compsel."(noxy > ".get_post('noxmin')." and  noxy < ".get_post('noxmax').")";
-    $firstsl = True;
+  $conditions = [];//Stores all query conditions
+  $params = []; // Stores all parameter values to be bound to the query condition
+  
+  // Check that 'natmax' and 'natmin' are present in the POST request and that they are not empty
+  //number of atoms--natm
+  if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
+    $conditions[] = "(natm > :natmin AND natm < :natmax)";//Add query criteria
+    $params[':natmin'] = $_POST['natmin'];//Assign the 'natmin' value in the POST request
+    $params[':natmax'] = $_POST['natmax'];
   }
 
+  //number of carbons--ncar
+  if (!empty($_POST['ncrmax']) && !empty($_POST['ncrmin'])) {
+    $conditions[] = "(ncar > :ncrmin AND ncar < :ncrmax)"; 
+    $params[':ncrmin'] = $_POST['ncrmin']; 
+    $params[':ncrmax'] = $_POST['ncrmax'];
+  }
+
+  //number of nitrogen--nnit
+  if (!empty($_POST['nntmax']) && !empty($_POST['nntmin'])) {
+    $conditions[] = "(nnit > :nntmin AND nnit < :nntmax)";
+    $params[':nntmin'] = $_POST['nntmin']; 
+    $params[':nntmax'] = $_POST['nntmax'];
+  }
+
+  //number of oxygen--noxy
+  if (!empty($_POST['noxmax']) && !empty($_POST['noxmin'])) {
+    $conditions[] = "(noxy > :noxmin AND noxy < :noxmax)"; 
+    $params[':noxmax'] = $_POST['noxmax'];
+  }
+  //adding more!--nsul/ncycl/nhdon/nhacc/nrotb
 
   echo "<pre>";
-  if($firstsl) {
-    $compsel = $compsel.") and ".$mansel;//End the condition statement and add the manufacturer condition
-    echo $compsel . "\n";
+  // Check if any conditions are added to the condition array
+  if (!empty($conditions)) {
+    // If available, build a complete SQL query
+    // Use the implode() function to concatenate all conditions with 'AND', forming part of the WHERE clause
+    $query = "SELECT catn FROM Compounds WHERE " . implode(' AND ', $conditions);
+
     try {
     // Execute queries using PDO
-      $stmt =$pdo->prepare($compsel);
+      $stmt =$pdo-> prepare($query);
+      // Bind the PHP variable to the corresponding parameter of the SQL query using the bindParam() method
+      //The binding is done only if 'natmax' and 'natmin' are actually present in the POST request
+      if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
+        $stmt->bindParam(':natmin', $natmin);// Bind $natmin variable to the :natmin placeholder in the SQL query
+        $stmt->bindParam(':natmax', $natmax); 
+
+      //execute query
       $stmt->execute();
-      $results = $stmt->fetch();
+      $results = $stmt->fetchAll();// Get the query result and return all the result rows as an associative array
 
       $rows = count($results);//count the lines of the rows
       $stmt->closeCursor();
@@ -113,6 +132,7 @@ if($setpar) {
       $pdo = null;
       }
      }
+      }
     } catch (PDOException $e) {
       die("Failed to execute query: " . $e->getMessage());
   }  
