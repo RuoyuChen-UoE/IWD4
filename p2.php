@@ -1,4 +1,7 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
 require_once 'login.php';
 require_once 'dbconnect.php';// Contains the database connection
@@ -14,14 +17,16 @@ try {
   $query_manu = "SELECT * FROM Manufacturers";
   $stmt = $pdo->prepare($query_manu);
   // call the stored procedure
+  echo "<pre>Executing SQL for manu: $query_manu</pre>";
+
   $stmt->execute();
   $stmt->debugDumpParams();//debug
     // Fetch all results into an array
   $results = $stmt->fetchAll();
   $rows = count($results);
   // Close the cursor, allowing the statement to be executed again
-  $stmt->closeCursor();
-  //close the query
+  // $stmt->closeCursor();
+  // //close the query
 
 
   echo '<pre>'."result";
@@ -99,20 +104,27 @@ if($setpar) {
     echo $compsel . "\n";
     try {
     // Execute queries using PDO
-    $stmt =$pdo->prepare($compsel);
+      $stmt =$pdo->prepare($compsel);
+      echo "<pre>Executing SQL for comounds: $compsel</pre>";
+
       $stmt->execute();
       $results = $stmt->fetchAll();
 
       $rows = count($results);//count the lines of the rows
       $stmt->closeCursor();
+
+      echo '<pre>'. "results compunds";
+      var_dump($results);
+      echo '</pre>';      
+      echo "finish query for compounds";
+
       if($rows > 100) {
         echo "Too many results ",$rows," Max is 100\n";
       } else  {
       for($j = 0 ; $j < $rows ; ++$j)
         {
       $row = $results[$j];
-      echo $row[0],"\n";
-      $pdo = null;
+      echo $row['catn'],"\n";
       }
     }
   } catch (PDOException $e) {
