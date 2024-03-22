@@ -8,7 +8,6 @@ echo<<<_HEAD1
 <html>
 <body>
 _HEAD1;
-
 // Query Manufacturer information
 try {
   $query_manu = "SELECT * FROM Manufacturers";
@@ -22,22 +21,20 @@ try {
   // Close the cursor, allowing the statement to be executed again
   $stmt->closeCursor();
   //close the query
+  // $pdo = null;
 
+echo '<pre>'."results";
+var_dump($results);
+echo '</pre>';
 
-  echo '<pre>'."result";
-  var_dump($results);
-  echo '</pre>';
-  
 } catch (PDOException $e) {
   die("Failed to execute query: " . $e->getMessage());
 }
 
-//看看等会要不要加 $_SESSION['supmask'] = 0;
 $smask = $_SESSION['supmask'];
 echo "<p>Current supplier mask: " . $_SESSION['supmask'] . "</p>";//debug
-
 $firstmn = False;
-//等下看看要不要加这一句--$sact = array();
+
 $mansel = "(";// If the manufacturer is selected, its ID is added to the $mansel string to build part of the subsequent query.
 for($j = 0 ; $j < $rows ; ++$j) {  // Get the results line by line
   $row = $results[$j];  // Gets the contents of the current row from the $results array
@@ -55,53 +52,63 @@ for($j = 0 ; $j < $rows ; ++$j) {  // Get the results line by line
 }
 $mansel = $mansel.")";
 echo "<p>mansel: " . $mansel . "</p>";//debug
-
 echo '<pre>'. "sact";
 var_dump($sact);
 echo '</pre>';
-
 echo <<<_MAIN1
     <pre>
 This is the catalogue retrieval Page  
     </pre>
 _MAIN1;
-
 $setpar = isset($_POST['natmax']); 
 if($setpar) {
-  $firstsl = False;
-  $compsel = "select catn from Compounds where (";
-  if (($_POST['natmax'] != "") && ($_POST['natmin']!="")) {
-    $compsel = $compsel."(natm > ".get_post('natmin')." and  natm < ".get_post('natmax').")";
-    $firstsl = True;
+  $conditions = [];//Stores all query conditions
+  $params = []; // Stores all parameter values to be bound to the query condition
+  
+  // Check that 'natmax' and 'natmin' are present in the POST request and that they are not empty
+  //number of atoms--natm
+  if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
+    $conditions[] = "(natm > :natmin AND natm < :natmax)";//Add query criteria
+    $params[':natmin'] = $_POST['natmin'];//Assign the 'natmin' value in the POST request
+    $params[':natmax'] = $_POST['natmax'];
   }
-
-  if (($_POST['ncrmax']!="") && ($_POST['ncrmin']!="")) {
-    if($firstsl) $compsel = $compsel." and ";
-    $compsel = $compsel."(ncar > ".get_post('ncrmin')." and  ncar < ".get_post('ncrmax').")";
-    $firstsl = True;
+  //number of carbons--ncar
+  if (!empty($_POST['ncrmax']) && !empty($_POST['ncrmin'])) {
+    $conditions[] = "(ncar > :ncrmin AND ncar < :ncrmax)"; 
+    $params[':ncrmin'] = $_POST['ncrmin']; 
+    $params[':ncrmax'] = $_POST['ncrmax'];
   }
-
-  if (($_POST['nntmax']!="") && ($_POST['nntmin']!="")) {
-    if($firstsl) $compsel = $compsel." and ";
-    $compsel = $compsel."(nnit > ".get_post('nntmin')." and  nnit < ".get_post('nntmax').")";
-    $firstsl = True;
+  //number of nitrogen--nnit
+  if (!empty($_POST['nntmax']) && !empty($_POST['nntmin'])) {
+    $conditions[] = "(nnit > :nntmin AND nnit < :nntmax)";
+    $params[':nntmin'] = $_POST['nntmin']; 
+    $params[':nntmax'] = $_POST['nntmax'];
   }
-
-  if (($_POST['noxmax']!="") && ($_POST['noxmin']!="")) {
-    if($firstsl) $compsel = $compsel." and ";
-    $compsel = $compsel."(noxy > ".get_post('noxmin')." and  noxy < ".get_post('noxmax').")";
-    $firstsl = True;
+  //number of oxygen--noxy
+  if (!empty($_POST['noxmax']) && !empty($_POST['noxmin'])) {
+    $conditions[] = "(noxy > :noxmin AND noxy < :noxmax)"; 
+    $params[':noxmin'] = $_POST['noxmin'];
+    $params[':noxmax'] = $_POST['noxmax'];
   }
-
+  //adding more!--nsul/ncycl/nhdon/nhacc/nrotb
+  
   echo "<pre>";
-  if($firstsl) {
-    $compsel = $compsel.") and ".$mansel;//End the condition statement and add the manufacturer condition
-    echo $compsel . "\n";
+  // Check if any conditions are added to the condition array
+  if (!empty($conditions)) {
+    // If available, build a complete SQL query
+    // Use the implode() function to concatenate all conditions with 'AND', forming part of the WHERE clause
+    $query = "SELECT catn FROM Compounds WHERE " . implode(' AND ', $conditions);
     try {
     // Execute queries using PDO
-    $stmt =$pdo->prepare($compsel);
+      $stmt =$pdo-> prepare($query);
+      // Bind the PHP variable to the corresponding parameter of the SQL query using the bindParam() method
+      //The binding is done only if 'natmax' and 'natmin' are actually present in the POST request
+      foreach ($params as $param => $value) { // Iterate over all parameters and bind them to SQL statements
+        $stmt->bindParam($param, $value);
+    }
+      //execute query
       $stmt->execute();
-      $results = $stmt->fetchAll();
+      $results = $stmt->fetchAll();// Get the query result and return all the result rows as an associative array
 
       $rows = count($results);//count the lines of the rows
       $stmt->closeCursor();
@@ -112,30 +119,38 @@ if($setpar) {
         {
       $row = $results[$j];
       echo $row[0],"\n";
-      $pdo = null;
+
       }
+     }
+    } catch (PDOException $e) {
+      die("Failed to execute query: " . $e->getMessage());
+  }  
+    } else {
+      echo "No Query Given\n";
     }
-  } catch (PDOException $e) {
-    die("Failed to execute query: " . $e->getMessage());
-}  
-  } else {
-    echo "No Query Given\n";
+    echo "</pre>";
   }
-  echo "</pre>";
-}  
+
+
+echo '<pre>'."post";
+var_dump($_POST);
+echo '</pre>';
+
+
+
 echo <<<_TAIL1
-   <form action="p2.php" method="post"><pre>
-       Max Atoms      <input type="text" name="natmax"/>    Min Atoms    <input type="text" name="natmin"/>
-       Max Carbons    <input type="text" name="ncrmax"/>    Min Carbons  <input type="text" name="ncrmin"/>
-       Max Nitrogens  <input type="text" name="nntmax"/>    Min Nitrogens<input type="text" name="nntmin"/>
-       Max Oxygens    <input type="text" name="noxmax"/>    Min Oxygens  <input type="text" name="noxmin"/>
-                   <input type="submit" value="list" />
+<form action="p2.php" method="post"><pre>
+   Max Atoms      <input type="text" name="natmax"/>    Min Atoms    <input type="text" name="natmin"/>
+   Max Carbons    <input type="text" name="ncrmax"/>    Min Carbons  <input type="text" name="ncrmin"/>
+   Max Nitrogens  <input type="text" name="nntmax"/>    Min Nitrogens<input type="text" name="nntmin"/>
+   Max Oxygens    <input type="text" name="noxmax"/>    Min Oxygens  <input type="text" name="noxmin"/>
+               <input type="submit" value="list" />
 </pre></form>
 </body>
 </html>
 _TAIL1;
 function get_post( $var)
 {
-    return $_POST[$var];
+    return $_POST[$var] ?? null;// Use the null merge operator in case it is not set
 }
 ?>
