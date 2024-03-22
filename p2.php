@@ -112,10 +112,9 @@ if($setpar) {
       $stmt =$pdo-> prepare($query);
       // Bind the PHP variable to the corresponding parameter of the SQL query using the bindParam() method
       //The binding is done only if 'natmax' and 'natmin' are actually present in the POST request
-      if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
-        $stmt->bindParam(':natmin', $natmin);// Bind $natmin variable to the :natmin placeholder in the SQL query
-        $stmt->bindParam(':natmax', $natmax); 
-
+      foreach ($params as $param => $value) { // 遍历所有的参数并绑定它们到 SQL 语句
+        $stmt->bindParam($param, $value);
+    }
       //execute query
       $stmt->execute();
       $results = $stmt->fetchAll();// Get the query result and return all the result rows as an associative array
@@ -129,10 +128,9 @@ if($setpar) {
         {
       $row = $results[$j];
       echo $row[0],"\n";
-      $pdo = null;
+
       }
      }
-      }
     } catch (PDOException $e) {
       die("Failed to execute query: " . $e->getMessage());
   }  
@@ -140,54 +138,9 @@ if($setpar) {
       echo "No Query Given\n";
     }
     echo "</pre>";
-  }  
+  }
 
          
-          
-          
-
-// $setpar = isset($_POST['natmax']); //Check if specific POST parameters are set
-// $firstsl = False;//Initializes $firstsl outside of a conditional statement
-
-// //Check if a condition is added and build $compsel
-// if($setpar) {
-//   //Initializes the query criteria and parameter array
-//   $conditions = [];
-//   $params = [];  
-//   //Build query conditions and parameters based on user input
-//   if (!empty($_POST['natmax']) && !empty($_POST['natmin'])) {
-//     $conditions[] = "(natm > :natmin AND natm < :natmax)";
-//     $params[':natmin'] = $_POST['natmin'];
-//     $params[':natmax'] = $_POST['natmax'];  
-//   }
-
-//   if (!empty($_POST['ncrmax']) && !empty($_POST['ncrmin'])) {
-//     $conditions[] = "(ncar > :ncrmin AND ncar < :ncrmax)";
-//     $params[':ncrmin'] = $_POST['ncrmin'];
-//     $params[':ncrmax'] = $_POST['ncrmax'];
-//   }
-
-//   if (!empty($_POST['nntmax']) && !empty($_POST['nntmin'])) {
-//       $conditions[] = "(nnit > :nntmin AND nnit < :nntmax)";
-//       $params[':nntmin'] = $_POST['nntmin'];
-//       $params[':nntmax'] = $_POST['nntmax'];
-//   }
-
-//   if (!empty($_POST['noxmax']) && !empty($_POST['noxmin'])) {
-//       $conditions[] = "(noxy > :noxmin AND noxy < :noxmax)";
-//       $params[':noxmin'] = $_POST['noxmin'];
-//       $params[':noxmax'] = $_POST['noxmax'];
-//   }
-//   // $firstsl should be set to True only if there is a condition
-//   if (count($conditions) > 0) {
-//     $firstsl = True;
-//     $compsel = "SELECT * FROM Compounds WHERE " . implode(" AND ", $conditions);
-//     if ($firstmn) { // If there is a selected manufacturer, it is added to the query
-//       $compsel .= " AND " . $mansel;
-//     }
-//   }
-// }
-
 
 // echo '<pre>';
 // var_dump($_POST);
@@ -213,8 +166,8 @@ echo <<<_TAIL1
 </body>
 </html>
 _TAIL1;
-function get_post( $var)
-{
-    return $_POST[$var];
-}
+// function get_post( $var)
+// {
+//     return $_POST[$var];
+// }
 ?>
