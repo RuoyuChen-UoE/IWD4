@@ -19,3 +19,5 @@ ds = cur.fetchall()
 ads = np.array(ds)
 print ("correlation is",sp.pearsonr(ads[:,0],ads[:,1])," over ",nrows,"data")
 con.close()
+print("########### Python script started")#debug
+print(f"######### Received arguments: {sys.argv}")
