@@ -23,9 +23,10 @@ ds = cur.fetchall()## get output
 ads = np.array(ds)
 num_bins = 20
 # the histogram of the data
-n, bins, patches = plt.hist(ads, num_bins, density=0, facecolor='blue', alpha=0.5)
+n, bins, patches = plt.hist(ads, num_bins, density=0, facecolor='#4682B4', alpha=0.3)
 plt.xlabel(xname)
-plt.ylabel('N')
+plt.ylabel('Number of Compounds')
+
 image = io.BytesIO()
 plt.savefig(image,format='png')
 sys.stdout.buffer.write(image.getvalue())
