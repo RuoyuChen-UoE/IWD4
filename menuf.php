@@ -26,10 +26,6 @@ echo <<<_MENU1
     <td bgcolor="#DCEFFE"><div align="center">
     <a href="https://bioinfmsc8.bio.ed.ac.uk/~s2552113/smile_draw.php"> Draw SMILE </a>
     </div></td>
-
-    <td bgcolor="#DCEFFE"><div align="center">
-    <a href="https://bioinfmsc8.bio.ed.ac.uk/~s2552113/smile_draw_NIH.php"> Draw SMILE_NIH </a>
-    </div></td>
    
     <td bgcolor="#DCEFFE"><div align="center">
     <a href="https://bioinfmsc8.bio.ed.ac.uk/~s2552113/phelp.php"> About this website </a>
