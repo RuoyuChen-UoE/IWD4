@@ -123,48 +123,57 @@ if (isset($_SESSION['tgval']) && $_SESSION['tgval'] != "" && isset($_SESSION['cv
         die("Unable to process query: " . $e->getMessage());
     }
 
-if($rows > 10000) {
+ if($rows > 10000) {
       echo "Too many results ",$rows," Max is 10000\n";
     } else  {
-      echo <<<TABLESET_
-    <table border="1">
-      <tr>
-        <td>CAT Number</td>
-        <td>Manufacturer</td>
-        <td>Property</td>
-        <td>Structure</td>
-      </tr>
-    TABLESET_;
+    echo "<div class='cards-container'>";
 
-// This is the results processing section, which also needs to be recoded for PHP 8 PDO 
       for($j = 0 ; $j < $rows ; ++$j){
       $row = $results[$j];
-
-      echo "<tr>";
-
-
-      printf("<td>%s</td> <td>%s</td>", $row['catn'],$manarray[$row['ManuID'] - 1]);
+      echo "<div class='card'>";//start of the card
+      //title of the card
+      echo "<div class='card-body'>";
+      echo "<h5 class='card-title'>{$row['catn']}</h5>";//using CAT number as title
       if($mychoice == "mw") {
-        printf("<td>%s</td> ", $row['mw']);
-      }
-      if($mychoice == "TPSA") {
-        printf("<td>%s</td> ", $row['TPSA']);
-      }
-      if($mychoice == "XlogP") {
-        printf("<td>%s</td> ", $row['XLogP']);
-      }
-      // Add smile drawing button
-      echo "<td><button onclick=\"getAndDrawSmiles('{$row['smiles']}')\">Draw Structure</button></td>";     
-            echo "</tr>";
+        echo "<p class='card-text'>Molecular Weight: {$row['mw']}</p>";
+    }
+    if($mychoice == "TPSA") {
+        echo "<p class='card-text'>Topological Polar Surface Area: {$row['TPSA']}</p>";
+    }
+    if($mychoice == "XlogP") {
+        echo "<p class='card-text'>XLogP: {$row['XLogP']}</p>";
+    }
+      //structure drawing button
+      echo "<button onclick=\"getAndDrawSmiles('{$row['smiles']}')\">Draw Structure</button>";
+      echo "</div>"; //end of card content
+      echo "</div>"; //end of the card
+  }
+  echo "</div>"; // Close cards-container
+      // echo "<tr>";
+
+
+      // printf("<td>%s</td> <td>%s</td>", $row['catn'],$manarray[$row['ManuID'] - 1]);
+      // if($mychoice == "mw") {
+      //   printf("<td>%s</td> ", $row['mw']);
+      // }
+      // if($mychoice == "TPSA") {
+      //   printf("<td>%s</td> ", $row['TPSA']);
+      // }
+      // if($mychoice == "XlogP") {
+      //   printf("<td>%s</td> ", $row['XLogP']);
+      // }
+      // // Add smile drawing button
+      // echo "<td><button onclick=\"getAndDrawSmiles('{$row['smiles']}')\">Draw Structure</button></td>";     
+      //       echo "</tr>";
             
-      }
-        echo "</table>";
+      // }
+      //   echo "</table>";
       }
       // echo "<div id='pagination'>";
       // for ($i = 1; $i <= $totalPages; $i++) {
       //   echo "<a href='?page=$i'>$i</a> ";
       // }
-      echo "</div>";
+      // echo "</div>";
 
 
       echo <<<_STYLE
